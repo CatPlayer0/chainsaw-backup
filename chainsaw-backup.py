@@ -22,9 +22,29 @@ def daemon(arg):
         print('(!) Backup daemon stopped')
     if arg=='start':
         print('(!) Backup daemon started')
+def show_config():
+    config=open(expand_path('~/silly-software/chainsaw-backup/config.json'), 'r')
+    config_imported=json.load(config)
+    backup_dir=config_imported.get('backup_dir')
+    target_dirs=config_imported.get('target_dirs')
+    entries_int=config_imported.get('entries_int')
+    period_int=config_imported.get('period_int')
+    print('1. Backup containing folder:')
+    print('','',backup_dir)
+    print('2. Directories to backup:')
+    print('','',str(len(target_dirs))+',', target_dirs)
+    print("3. Time interval between backups:")
+    print('','',"Every",period_int//3600,"hour(s)",period_int%3600//60,"minute(s)",period_int%3600%60,"second(s)")
+    print("4. Backup entries to keep:")
+    print('','',entries_int, "entries")
+    print()
 def parse_json(silent):
-    config=open(expand_path('~/silly-software/chainsaw-backup/config.json'), 'r+')
-    config_imported=json.loads(str(config.readline()))
+    config=open(expand_path('~/silly-software/chainsaw-backup/config.json'), 'r')
+    config_imported=json.load(config)
+    backup_dir=config_imported.get('backup_dir')
+    target_dirs=config_imported.get('target_dirs')
+    entries_int=config_imported.get('entries_int')
+    period_int=config_imported.get('period_int')
     if not silent: print(config_imported)
 def kill():                 #immediately terminate the program
     #check if daemon currently running
@@ -34,8 +54,9 @@ def help():                 #dislpay help information
     print('Commands:\n')
     print('configure       -- reconfigure backup options')
     print('check_integrity -- verify integrity of configuration files')
+    print('show_config     -- parse config and display current values')
     print('\nAdvanced:\n')
-    print('parse_json      -- parse and print out config.json')
+    print('parse_json      -- parse and print out Raw Data in config.json')
 def output(string):         #check output for shell command
     return(str(subprocess.check_output(string, shell=True, text=True)))
 def check_dir(directory):
@@ -212,3 +233,6 @@ while True:
         daemon('start')
     if inp=='parse_json':
         parse_json(False)
+    if inp=='show_config':
+        parse_json(True)
+        show_config()
