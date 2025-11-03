@@ -22,7 +22,7 @@ def daemon(arg):
         print('(!) Backup daemon stopped')
     if arg=='start':
         print('(!) Backup daemon started')
-def show_config():
+def show_config(): #perfect parser, reuse in daemon!
     config=open(expand_path('~/silly-software/chainsaw-backup/config.json'), 'r')
     config_imported=json.load(config)
     backup_dir=config_imported.get('backup_dir')
