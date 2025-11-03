@@ -6,6 +6,7 @@ import sys
 import subprocess
 from time import sleep
 from pathlib import Path
+import json
 #define
 target_dirs=[]
 backup_dir=''
@@ -21,12 +22,20 @@ def daemon(arg):
         print('(!) Backup daemon stopped')
     if arg=='start':
         print('(!) Backup daemon started')
+def parse_json(silent):
+    config=open(expand_path('~/silly-software/chainsaw-backup/config.json'), 'r+')
+    config_imported=json.loads(str(config.readline()))
+    if not silent: print(config_imported)
 def kill():                 #immediately terminate the program
     #check if daemon currently running
     sys.exit('Exit configurator...') 
 def help():                 #dislpay help information
     print('---chainsaw-backup help---')
-    print('Commands:\nconfigure -- reconfigure backup options\ncheck_integrity -- verify integrity of configuration files')
+    print('Commands:\n')
+    print('configure       -- reconfigure backup options')
+    print('check_integrity -- verify integrity of configuration files')
+    print('\nAdvanced:\n')
+    print('parse_json      -- parse and print out config.json')
 def output(string):         #check output for shell command
     return(str(subprocess.check_output(string, shell=True, text=True)))
 def check_dir(directory):
@@ -44,11 +53,11 @@ def expand_path(path):      #somehow some things don't work without expanding th
         return('')
 def configure():            #configure manually
     try:
-        file=open(expand_path('~/silly-software/chainsaw-backup/config.json'), 'w+')
+        config=open(expand_path('~/silly-software/chainsaw-backup/config.json'), 'w+')
     except:
         com='touch '+expand_path('~/silly-software/chainsaw-backup/config.json')
         system(com)
-        file=open(expand_path('~/silly-software/chainsaw-backup/config.json'), 'w+')
+        config=open(expand_path('~/silly-software/chainsaw-backup/config.json'), 'w+')
     print('     ---Configuration---     ')
     print('1. Enter path to directory containing backups')
     print('e.g. ~/folder1/folder2/')
@@ -69,7 +78,7 @@ def configure():            #configure manually
                     print('An unknown error has occured, failed to create a directory. Please try again')
             except:
                 print('Bash has returned an exception while creating a directory; please enter a valid value!')
-    backup_dir=str(inp)
+    backup_dir=str(expand_path(inp))
     print()
     print('2. Enter paths to directories to backup')
     inp=None
@@ -134,33 +143,52 @@ def configure():            #configure manually
             inp=input('>>> ')
     print("\nReview your choices:")
     print('1. Backup containing folder:')
-    print(backup_dir)
+    print('','',backup_dir)
     print('2. Directories to backup:')
-    print(str(len(target_dirs))+',', target_dirs)
+    print('','',str(len(target_dirs))+',', target_dirs)
     print("3. Time interval between backups:")
-    print("Every",period_int//3600,"hour(s)",period_int%3600//60,"minute(s)",period_int%3600%60,"second(s)")
+    print('','',"Every",period_int//3600,"hour(s)",period_int%3600//60,"minute(s)",period_int%3600%60,"second(s)")
     print("4. Backup entries to keep:")
-    print(entries_int, "entries")
+    print('','',entries_int, "entries")
     print()
     #insert json magic here
+    config_local = {
+  "backup_dir": backup_dir,
+  "target_dirs": target_dirs,
+  "entries_int": entries_int,
+  "period_int": period_int
+}
+    #try:
+    config=open(expand_path('~/silly-software/chainsaw-backup/config.json'), 'w+')
+    config.write(json.dumps(config_local))
     print("You're all set! Changes are applied automatically")
+    #except:
+    #    print('There was an error writing the config file, sorry!')
 def check_integrity():
     print('Running integrity check...')
     if check_dir('~/silly-software/'):
         if check_dir('~/silly-software/chainsaw-backup'):
             if check_file('~/silly-software/chainsaw-backup/config.json'): #checks if json config file exists
                 print('All files intact')   #all files present
-                config=open(expand_path('~/silly-software/chainsaw-backup/config.json'))
+                config=open(expand_path('~/silly-software/chainsaw-backup/config.json'), 'r')
+                try:
+                    parse_json(True)
+                except:
+                    print('config.json is corrupt, initializing configuration routine')
+                    configure()
             else:
                 system('touch silly-software/chainsaw-backup/config.json') #creates json config
+                print('Config file was missing, initializing configuration routine')
                 configure() #calls for manual configure since the json file was missing
         else:
             system('mkdir -p silly-software/chainsaw-backup/')                 #creates program folder
             system('touch silly-software/chainsaw-backup/config.json')      #creates json config
+            print('Config file was missing, initializing configuration routine')
             configure() #calls for manual configure since the json file was missing
     else:                               #creates general folder (avoid cluttering of ~/home)
         system('mkdir -p silly-software/chainsaw-backup/')                     #creates program folder
         system('touch silly-software/chainsaw-backup/config.json')          #creates json config
+        print('Config file was missing, initializing configuration routine')
         configure() #calls for manual configure since the json file was missing
 #start up routine
 check_integrity()
@@ -182,3 +210,5 @@ while True:
         daemon('stop')
     if inp=='start':
         daemon('start')
+    if inp=='parse_json':
+        parse_json(False)
