@@ -1,2 +1,2 @@
 # chainsaw-backup
-Easy automatic backup tool for Linux-based operating systems
+Easy automatic command line backup tool for Linux-based operating systems
