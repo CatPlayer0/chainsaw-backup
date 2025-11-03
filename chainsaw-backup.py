@@ -16,8 +16,14 @@ valid=False
 entries_int=0
 home = Path.home()
 #functions
+def daemon(arg):
+    if arg=='stop':
+        print('(!) Backup daemon stopped')
+    if arg=='start':
+        print('(!) Backup daemon started')
 def kill():                 #immediately terminate the program
-    sys.exit() 
+    #check if daemon currently running
+    sys.exit('Exit configurator...') 
 def help():                 #dislpay help information
     print('---chainsaw-backup help---')
     print('Commands:\nconfigure -- reconfigure backup options\ncheck_integrity -- verify integrity of configuration files')
@@ -31,7 +37,11 @@ def check_file(path_to_file):
     return(os.path.isfile(expanded_file_path))
 def expand_path(path):      #somehow some things don't work without expanding the path, as in the functions above, some python quirk prolly
     #yeah it really does demand expanding ~ to full home somehow. It works, I won't dare to complain
-    return(os.path.expanduser(path))
+    try:
+        return(os.path.expanduser(path))
+    except:
+        print('Caught exception: invalid directory path')
+        return('')
 def configure():            #configure manually
     try:
         file=open(expand_path('~/silly-software/chainsaw-backup/config.json'), 'w+')
@@ -39,8 +49,8 @@ def configure():            #configure manually
         com='touch '+expand_path('~/silly-software/chainsaw-backup/config.json')
         system(com)
         file=open(expand_path('~/silly-software/chainsaw-backup/config.json'), 'w+')
-    print('---Configuration---')
-    print('Path to directory containing backups')
+    print('     ---Configuration---     ')
+    print('1. Enter path to directory containing backups')
     print('e.g. ~/folder1/folder2/')
     inp=input('>>> ')
     while not check_dir(str(inp)):
@@ -50,27 +60,46 @@ def configure():            #configure manually
         inp=input('>>> ')
         if inp=='y':
             try:
-                com='mkdir -p',expand_path(str(temp_dir))
-                print("Created:",expand_path(temp_dir))
-                break
+                com='mkdir -p '+expand_path(str(temp_dir))
+                system(com)
+                if check_dir(temp_dir):
+                    print("Created:",expand_path(temp_dir))
+                    break
+                else:
+                    print('An unknown error has occured, failed to create a directory. Please try again')
             except:
                 print('Bash has returned an exception while creating a directory; please enter a valid value!')
     backup_dir=str(inp)
     print()
-    print('Paths to directories to backup')
-    print('Add several, then return an empty line once done')
-    inp=''
-    while inp!="":
+    print('2. Enter paths to directories to backup')
+    inp=None
+    target_dirs=[]
+    while inp!='':
+        print('Add one or more paths, return an empty line once done')
         inp=input('>>> ')
-        while not check_dir(str(inp)):
+        temp_dir=inp
+        while not check_dir(str(inp)) and inp!='': #handles directory creation if one doesn't exist already
+            temp_dir=inp
             print('Please enter a valid value, check for typos or make sure the directory exists')
+            print('Enter y to override and attempt to create the folder')
             inp=input('>>> ')
-        if str(inp) in target_dirs:
-            print('That dir is already added')
-        if inp!='' and str(inp) not in target_dirs:
-            target_dirs.append(str(inp))
+            if inp=='y':
+                try:
+                    com='mkdir -p '+expand_path(str(temp_dir))
+                    system(com)
+                    if check_dir(temp_dir):
+                        print("Created:",expand_path(temp_dir))
+                        break
+                    else:
+                        print('An unknown error has occured, failed to create a directory. Please try again')
+                except:
+                    print('Bash has returned an exception while creating a directory; please enter a valid value!')
+        if str(expand_path(temp_dir)) in target_dirs:
+            print('That directory is already added')
+        if temp_dir!='' and str(temp_dir) not in target_dirs:
+            target_dirs.append(str(expand_path(temp_dir)))
     print()
-    print('Time intervals between backups in seconds')
+    print('3. Enter time intervals between backups in seconds')
     print('Enter a natural non-zero number')
     inp=input('>>> ')
     valid=False
@@ -87,7 +116,7 @@ def configure():            #configure manually
             print('Invalid value. Enter a natural non-zero number')
             inp=input('>>> ')
     print()
-    print('Amount of backup entries to keep')
+    print('4. Enter amount of backup entries to keep (once out of space oldest entry is going to be overwritten)')
     print('Enter a natural non-zero number')
     inp=input('>>> ')
     valid=False
@@ -103,8 +132,18 @@ def configure():            #configure manually
         else:
             print('Invalid value. Enter a natural non-zero number')
             inp=input('>>> ')
+    print("\nReview your choices:")
+    print('1. Backup containing folder:')
+    print(backup_dir)
+    print('2. Directories to backup:')
+    print(str(len(target_dirs))+',', target_dirs)
+    print("3. Time interval between backups:")
+    print("Every",period_int//3600,"hour(s)",period_int%3600//60,"minute(s)",period_int%3600%60,"second(s)")
+    print("4. Backup entries to keep:")
+    print(entries_int, "entries")
+    print()
     #insert json magic here
-    print('Done! Changes were applied. Restart the tool to take effect')
+    print("You're all set! Changes are applied automatically")
 def check_integrity():
     print('Running integrity check...')
     if check_dir('~/silly-software/'):
@@ -137,3 +176,9 @@ while True:
         help()
     if inp=='configure':
         configure()
+    if inp=='exit':
+        kill()
+    if inp=='stop':
+        daemon('stop')
+    if inp=='start':
+        daemon('start')
