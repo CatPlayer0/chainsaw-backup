@@ -24,11 +24,17 @@ def daemon(arg):
         print('(!) Backup daemon started now at ', end='')
         x = datetime.datetime.now()
         print(x.strftime("%c"))
+        print('PLEASE READ CAREFULLY THE FOLLOWING')
+        print('(!) First backup is going to be created in 60 seconds.\n')
         print('\n(!) Insert Ctrl+C or Ctrl+D to stop doing backups immediately. All pereviously made backups will be kept\n')
         print('(!) Terminating at exactly the time a backup is made may create a race condition with big files. Handle risks on slower systems accordingly\n')
-        print('(!) First backup is going to be created in 60 seconds.\n')
-        print('You will get a notification in advance when a backup is made\n')
-        print('Input is unavailable while backup service is running')
+        print('(!) It is adviced you review your backup settings before proceeding \n')
+        print('(i) You will get a notification in advance when a backup is made\n')
+        print('(i) Input is unavailable while backup service is running')
+        #!!!!!! ACTUAL BACKUP DAEMON STARTS HERE!!
+        parse_json(True)
+        sleep(60)
+        
 def show_config(): #perfect parser, reuse in daemon!
     config=open(expand_path('~/silly-software/chainsaw-backup/config.json'), 'r')
     config_imported=json.load(config)
