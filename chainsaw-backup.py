@@ -1,4 +1,5 @@
 #declare
+import datetime
 import os
 from os import system
 from os import getcwd 
@@ -8,6 +9,7 @@ from time import sleep
 from pathlib import Path
 import json
 #define
+inp=''
 target_dirs=[]
 backup_dir=''
 config={}
@@ -18,10 +20,15 @@ entries_int=0
 home = Path.home()
 #functions
 def daemon(arg):
-    if arg=='stop':
-        print('(!) Backup daemon stopped')
     if arg=='start':
-        print('(!) Backup daemon started')
+        print('(!) Backup daemon started now at ', end='')
+        x = datetime.datetime.now()
+        print(x.strftime("%c"))
+        print('\n(!) Insert Ctrl+C or Ctrl+D to stop doing backups immediately. All pereviously made backups will be kept\n')
+        print('(!) Terminating at exactly the time a backup is made may create a race condition with big files. Handle risks on slower systems accordingly\n')
+        print('(!) First backup is going to be created in 60 seconds.\n')
+        print('You will get a notification in advance when a backup is made\n')
+        print('Input is unavailable while backup service is running')
 def show_config(): #perfect parser, reuse in daemon!
     config=open(expand_path('~/silly-software/chainsaw-backup/config.json'), 'r')
     config_imported=json.load(config)
@@ -48,7 +55,7 @@ def parse_json(silent):
     if not silent: print(config_imported)
 def kill():                 #immediately terminate the program
     #check if daemon currently running
-    sys.exit('Exit configurator...') 
+    sys.exit('Exit...') 
 def help():                 #dislpay help information
     print('---chainsaw-backup help---')
     print('Commands:\n')
@@ -85,18 +92,18 @@ def configure():            #configure manually
     inp=input('>>> ')
     while not check_dir(str(inp)):
         temp_dir=inp
-        print('Please enter a valid value, check for typos or make sure the directory exists')
-        print('Enter y to override and attempt to create the folder')
+        print('Direcotory not found')
+        print('Enter y to attempt to create the folder')
         inp=input('>>> ')
-        if inp=='y':
-            try:
+        if inp=='y':                    #I could make it .lower() the input, but thats another exception to handle.
+            try:                        #pointless overcomplication. Same applies to all subsequent y/n choices
                 com='mkdir -p '+expand_path(str(temp_dir))
                 system(com)
                 if check_dir(temp_dir):
                     print("Created:",expand_path(temp_dir))
                     break
                 else:
-                    print('An unknown error has occured, failed to create a directory. Please try again')
+                    print("An unknown error has occured, failed to create a directory. You normally shouldn't be able to see this message")
             except:
                 print('Bash has returned an exception while creating a directory; please enter a valid value!')
     backup_dir=str(expand_path(inp))
@@ -110,8 +117,8 @@ def configure():            #configure manually
         temp_dir=inp
         while not check_dir(str(inp)) and inp!='': #handles directory creation if one doesn't exist already
             temp_dir=inp
-            print('Please enter a valid value, check for typos or make sure the directory exists')
-            print('Enter y to override and attempt to create the folder')
+            print('Direcotory not found')
+            print('Enter y to attempt to create the folder')
             inp=input('>>> ')
             if inp=='y':
                 try:
@@ -121,7 +128,7 @@ def configure():            #configure manually
                         print("Created:",expand_path(temp_dir))
                         break
                     else:
-                        print('An unknown error has occured, failed to create a directory. Please try again')
+                        print("An unknown error has occured, failed to create a directory. You normally shouldn't be able to see this message")
                 except:
                     print('Bash has returned an exception while creating a directory; please enter a valid value!')
         if str(expand_path(temp_dir)) in target_dirs:
@@ -146,7 +153,7 @@ def configure():            #configure manually
             print('Invalid value. Enter a natural non-zero number')
             inp=input('>>> ')
     print()
-    print('4. Enter amount of backup entries to keep (once out of space oldest entry is going to be overwritten)')
+    print('4. Enter amount of backup entries to keep (once out of space oldest entry is going to be overwritten!)')
     print('Enter a natural non-zero number')
     inp=input('>>> ')
     valid=False
@@ -162,7 +169,7 @@ def configure():            #configure manually
         else:
             print('Invalid value. Enter a natural non-zero number')
             inp=input('>>> ')
-    print("\nReview your choices:")
+    print("\nDoes everything look okay?")
     print('1. Backup containing folder:')
     print('','',backup_dir)
     print('2. Directories to backup:')
@@ -170,8 +177,12 @@ def configure():            #configure manually
     print("3. Time interval between backups:")
     print('','',"Every",period_int//3600,"hour(s)",period_int%3600//60,"minute(s)",period_int%3600%60,"second(s)")
     print("4. Backup entries to keep:")
-    print('','',entries_int, "entries")
-    print()
+    print('','',entries_int, "entries\nApply changes? y/n")
+    inp=input('>>>')
+    if inp=='y':
+        print("You're all set!")
+    else:
+        return 0
     #insert json magic here
     config_local = {
   "backup_dir": backup_dir,
@@ -179,12 +190,13 @@ def configure():            #configure manually
   "entries_int": entries_int,
   "period_int": period_int
 }
-    #try:
-    config=open(expand_path('~/silly-software/chainsaw-backup/config.json'), 'w+')
-    config.write(json.dumps(config_local))
-    print("You're all set! Changes are applied automatically")
-    #except:
-    #    print('There was an error writing the config file, sorry!')
+    try:
+        config=open(expand_path('~/silly-software/chainsaw-backup/config.json'), 'w+')
+        config.write(json.dumps(config_local))
+        print("Changes were applied")
+        print("type 'start' to start backups now")
+    except:
+        print('There was an error writing the config file, sorry!')
 def check_integrity():
     print('Running integrity check...')
     if check_dir('~/silly-software/'):
@@ -215,7 +227,7 @@ def check_integrity():
 check_integrity()
 print('Welcome,',(str(home).replace('/','')).replace('home','')+'!')
 #mainloop
-while True:
+while inp!='start':
     #so basically this thing is supposed to be a never-ending loop taking your input to control it
     #you use codewords to call functions
     #aaand it is precisely what it sounds like
@@ -227,8 +239,6 @@ while True:
         configure()
     if inp=='exit':
         kill()
-    if inp=='stop':
-        daemon('stop')
     if inp=='start':
         daemon('start')
     if inp=='parse_json':
