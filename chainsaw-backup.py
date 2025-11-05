@@ -24,17 +24,51 @@ def daemon(arg):
         print('(!) Backup daemon started now at ', end='')
         x = datetime.datetime.now()
         print(x.strftime("%c"))
-        print('PLEASE READ CAREFULLY THE FOLLOWING')
+        print('!!! ----PLEASE READ CAREFULLY THE FOLLOWING---- !!!')
         print('(!) First backup is going to be created in 60 seconds.\n')
         print('\n(!) Insert Ctrl+C or Ctrl+D to stop doing backups immediately. All pereviously made backups will be kept\n')
         print('(!) Terminating at exactly the time a backup is made may create a race condition with big files. Handle risks on slower systems accordingly\n')
-        print('(!) It is adviced you review your backup settings before proceeding \n')
+        print('(!) It is adviced you review your backup settings before proceeding, use show_config \n')
         print('(i) You will get a notification in advance when a backup is made\n')
         print('(i) Input is unavailable while backup service is running')
         #!!!!!! ACTUAL BACKUP DAEMON STARTS HERE!!
-        parse_json(True)
+        config=open(expand_path('~/silly-software/chainsaw-backup/config.json'), 'r')
+        config_imported=json.load(config)
+        backup_dir=config_imported.get('backup_dir')
+        target_dirs=config_imported.get('target_dirs')
+        entries_int=config_imported.get('entries_int')
+        period_int=config_imported.get('period_int')
         sleep(60)
-        
+        while True:
+            x=datetime.datetime.now()
+            print('Now copying...')
+            prompt=str('mkdir -p'+expand_path(backup_dir)+'backup-'+str(x))
+            for target in target_dirs:
+                prompt=str('cp -r '+expand_path(target)+' '+expand_path(backup_dir))
+                try:
+                    system(prompt)
+                except:
+                    print("(!!) ERROR while copying",expand_path(target))
+                    print("Promt was: '"+prompt+"'")
+            print('Created backup:',x)
+            sleep(period_int)
+def check_folders(): #dumped for now, realized ~cp creates the dirs anyway bruh
+    legit=True
+    config=open(expand_path('~/silly-software/chainsaw-backup/config.json'), 'r')
+    config_imported=json.load(config)
+    backup_dir=config_imported.get('backup_dir')
+    target_dirs=config_imported.get('target_dirs')
+    entries_int=config_imported.get('entries_int')
+    period_int=config_imported.get('period_int')
+    print('Checking directories...')
+    print('Backup directory:')
+    if check_dir(backup_dir):
+        print(expand_path(backup_dir), '-- is a directory')
+    else:
+        print(expand_path(backup_dir), '-- is a directory')
+        legit=False
+    for element in target_dirs:
+        check_dir(target_dirs)
 def show_config(): #perfect parser, reuse in daemon!
     config=open(expand_path('~/silly-software/chainsaw-backup/config.json'), 'r')
     config_imported=json.load(config)
@@ -68,6 +102,7 @@ def help():                 #dislpay help information
     print('configure       -- reconfigure backup options')
     print('check_integrity -- verify integrity of configuration files')
     print('show_config     -- parse config and display current values')
+    print('check_folders   -- verify the existance of folders before running')
     print('\nAdvanced:\n')
     print('parse_json      -- parse and print out Raw Data in config.json')
 def output(string):         #check output for shell command
@@ -175,6 +210,12 @@ def configure():            #configure manually
         else:
             print('Invalid value. Enter a natural non-zero number')
             inp=input('>>> ')
+    if backup_dir[-1]!='/':
+        backup_dir=str(backup_dir)+'/'
+    for element in target_dirs:
+        if element[-1]!='/':
+            target_dirs[target_dirs.index(element)]=(element)+'/'
+    element=''
     print("\nDoes everything look okay?")
     print('1. Backup containing folder:')
     print('','',backup_dir)
@@ -252,3 +293,5 @@ while inp!='start':
     if inp=='show_config':
         parse_json(True)
         show_config()
+    else:
+        print(inp,'-- unknown command')
