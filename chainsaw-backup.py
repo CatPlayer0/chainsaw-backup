@@ -8,6 +8,7 @@ import subprocess
 from time import sleep
 from pathlib import Path
 import json
+import shutil
 #define
 inp=''
 target_dirs=[]
@@ -102,9 +103,15 @@ def help():                 #dislpay help information
     print('configure       -- reconfigure backup options')
     print('check_integrity -- verify integrity of configuration files')
     print('show_config     -- parse config and display current values')
-    print('check_folders   -- verify the existance of folders before running')
+    print('check_folders   -- verify the existence of folders before running')
     print('\nAdvanced:\n')
     print('parse_json      -- parse and print out Raw Data in config.json')
+    print('\nDebug:                         (!)For development and testing. Use at your own risk\n')
+    print('d_rem_oldest    -- calls rm_oldest() using the current directory configuration as argument by default')
+    print('d_easter_egg    -- ???')
+    print('Other:')
+    print('disclaimer      -- prints out boring legal stuff')
+    print('credits      -- prints out info about creators')
 def output(string):         #check output for shell command
     return(str(subprocess.check_output(string, shell=True, text=True)))
 def check_dir(directory):
@@ -270,6 +277,44 @@ def check_integrity():
         system('touch silly-software/chainsaw-backup/config.json')          #creates json config
         print('Config file was missing, initializing configuration routine')
         configure() #calls for manual configure since the json file was missing
+def rm_oldest(directory):  #Some of the methods here were suggested by perplexity and stack overflow
+    config=open(expand_path('~/silly-software/chainsaw-backup/config.json'), 'r')
+    config_imported=json.load(config)
+    backup_dir=config_imported.get('backup_dir')
+    target_dirs=config_imported.get('target_dirs')
+    entries_int=config_imported.get('entries_int')
+    period_int=config_imported.get('period_int')
+
+    dir_path = backup_dir       #I better be honest I hadn't known about these. All better than inefficient lists and 'ls -a' parsing **** I was planning to create initially
+                               #THOUGH lower your forks and torches I built and double-checked everything. AI's code would be botched anyway
+    subdirs = [d for d in dir_path.iterdir() if d.is_dir()]
+    if not subdirs:
+        print("No subdirectories found. Where did you take all the backups? What is going on?")
+        return
+    oldest = min(subdirs, key=lambda x: x.stat().st_mtime)
+    print(f"Deleting deprecated backup files: {oldest}")
+    try:
+        shutil.rmtree(oldest)
+    except OSError as e:
+        print(f"Error deleting {oldest}: {e}") #printfs are beautiful. I should use these more
+def easteregg():
+    print('⠀⢸⠂⠀⠀⠀⠘⣧⠀⠀⣟⠛⠲⢤⡀⠀⠀⣰⠏⠀⠀⠀⠀⠀⢹⡀\n⠀⡿⠀⠀⠀⠀⠀⠈⢷⡀⢻⡀⠀⠀⠙⢦⣰⠏⠀⠀⠀⠀⠀⠀⢸⠀\n⠀⡇⠀⠀⠀⠀⠀⠀⢀⣻⠞⠛⠀⠀⠀⠀⠻⠀⠀⠀⠀⠀⠀⠀⢸⠀\n⠀⡇⠀⠀⠀⠀⠀⠀⠛⠓⠒⠓⠓⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢸⠀\n⠀⡇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣸⠀\n⠀⢿⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣀⣀⣀⣀⠀⠀⢀⡟⠀\n⠀⠘⣇⠀⠘⣿⠋⢹⠛⣿⡇⠀⠀⠀⠀⣿⣿⡇⠀⢳⠉⠀⣠⡾⠁⠀\n⣦⣤⣽⣆⢀⡇⠀⢸⡇⣾⡇⠀⠀⠀⠀⣿⣿⡷⠀⢸⡇⠐⠛⠛⣿⠀\n⠹⣦⠀⠀⠸⡇⠀⠸⣿⡿⠁⢀⡀⠀⠀⠿⠿⠃⠀⢸⠇⠀⢀⡾⠁⠀\n⠀⠈⡿⢠⢶⣡⡄⠀⠀⠀⠀⠉⠁⠀⠀⠀⠀⠀⣴⣧⠆⠀⢻⡄⠀⠀\n⠀⢸⠃⠀⠘⠉⠀⠀⠀⠠⣄⡴⠲⠶⠴⠃⠀⠀⠀⠉⡀⠀⠀⢻⡄⠀\n⠀⠘⠒⠒⠻⢦⣄⡀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣀⣤⠞⠛⠒⠛⠋⠁⠀\n⠀⠀⠀⠀⠀⠀⠸⣟⠓⠒⠂⠀⠀⠀⠀⠀⠈⢷⡀⠀⠀⠀⠀⠀⠀⠀\n⠀⠀⠀⠀⠀⠀⠀⠙⣦⠀⠀⠀⠀⠀⠀⠀⠀⠈⢷⠀⠀⠀⠀⠀⠀⠀\n⠀⠀⠀⠀⠀⠀⠀⣼⣃⡀⠀⠀⠀⠀⠀⠀⠀⠀⠘⣆⠀⠀⠀⠀⠀⠀\n⠀⠀⠀⠀⠀⠀⠀⠉⣹⠃⠀⠀⠀⠀⠀⠀⠀⠀⠀⢻⠀⠀⠀⠀⠀⠀\n⠀⠀⠀⠀⠀⠀⠀⠀⡿⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢸⡆')
+    print("You like making software, don't you?")
+def disclaimer():
+    print("""
+    chainsaw-backup.py -- Easy automatic command line backup tool for Linux-based operating systems
+    Copyright (C) 2025 CatPlayer8274
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+    """)
 #start up routine
 check_integrity()
 print('Welcome,',(str(home).replace('/','')).replace('home','')+'!')
@@ -278,7 +323,7 @@ while inp!='start':
     #so basically this thing is supposed to be a never-ending loop taking your input to control it
     #you use codewords to call functions
     #aaand it is precisely what it sounds like
-    #also because of this I had to make a separate background process to handle the backups themselves
+    #also because of this -- oopsie oopsie never mind i fogor what was supposed to be here ^.^
     inp=(input(">>> "))
     if inp=='help':
         help()
@@ -293,5 +338,9 @@ while inp!='start':
     if inp=='show_config':
         parse_json(True)
         show_config()
+    if inp=='d_easter_egg':
+        easteregg()
+    if inp=='disclaimer':
+        disclaimer()
     else:
-        print(inp,'-- unknown command')
+        print(inp,'-- unknown command. Type help for list of all commands')
