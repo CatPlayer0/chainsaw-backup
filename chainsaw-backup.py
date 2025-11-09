@@ -103,18 +103,20 @@ def help():                 #dislpay help information
     print('configure       -- reconfigure backup options')
     print('check_integrity -- verify integrity of configuration files')
     print('show_config     -- parse config and display current values')
-    print('check_folders   -- verify the existence of folders before running')
+    #print('check_folders   -- verify the existence of folders before running')
     print('\nAdvanced:\n')
     print('parse_json      -- parse and print out Raw Data in config.json')
     print('\nDebug:                         (!)For development and testing. Use at your own risk\n')
-    print('d_rem_oldest    -- calls rm_oldest() using the current directory configuration as argument by default')
+    print("d_rem_oldest    -- calls rm_oldest() using the current directory configuration as argument by default. Note that it doesn't override entries_int argument in config")
     print('d_easter_egg    -- ???')
-    print('Other:')
+    print('\nOther:\n')
     print('disclaimer      -- prints out boring legal stuff')
     print('credits      -- prints out info about creators')
 def output(string):         #check output for shell command
     return(str(subprocess.check_output(string, shell=True, text=True)))
 def check_dir(directory):
+    if '~/'==directory:
+        return False
     expanded_directory = os.path.expanduser(directory)  #expand tilde
     return(os.path.isdir(expanded_directory))
 def check_file(path_to_file):
@@ -137,13 +139,15 @@ def configure():            #configure manually
     print('     ---Configuration---     ')
     print('1. Enter path to directory containing backups')
     print('e.g. ~/folder1/folder2/')
-    inp=input('>>> ')
-    while not check_dir(str(inp)):
+    inp=input('~/')
+    inp='~/'+inp
+    while not check_dir(str(inp)) or inp=='~/':
         temp_dir=inp
-        print('Direcotory not found')
-        print('Enter y to attempt to create the folder')
+        print('Directory not found')
+        print('Enter y to attempt to create the folder or anything else to try again')
+        print("Please note that you can't use ~/")
         inp=input('>>> ')
-        if inp=='y':                    #I could make it .lower() the input, but thats another exception to handle.
+        if inp=='y': #I could make it .lower() the input, but thats another exception to handle.
             try:                        #pointless overcomplication. Same applies to all subsequent y/n choices
                 com='mkdir -p '+expand_path(str(temp_dir))
                 system(com)
@@ -154,19 +158,26 @@ def configure():            #configure manually
                     print("An unknown error has occured, failed to create a directory. You normally shouldn't be able to see this message")
             except:
                 print('Bash has returned an exception while creating a directory; please enter a valid value!')
+        else:
+            inp=input('~/')
+            inp='~/'+inp
     backup_dir=str(expand_path(inp))
     print()
     print('2. Enter paths to directories to backup')
     inp=None
     target_dirs=[]
-    while inp!='':
-        print('Add one or more paths, return an empty line once done')
-        inp=input('>>> ')
+    while True:
+        print('Add one or more paths, return a $ once done')
+        if inp=='~/$' and len(target_dirs)>0:
+            break
+        inp=input('~/')
+        inp='~/'+inp
         temp_dir=inp
-        while not check_dir(str(inp)) and inp!='': #handles directory creation if one doesn't exist already
+        while not check_dir(str(inp)) and inp!='~/$' and inp!='' and inp!='$': #handles directory creation if one doesn't exist already
             temp_dir=inp
-            print('Direcotory not found')
-            print('Enter y to attempt to create the folder')
+            print('Directory not found')
+            print('Enter y to attempt to create the folder or anything else to try again')
+            print("Please note that you can't use ~/")
             inp=input('>>> ')
             if inp=='y':
                 try:
@@ -181,7 +192,7 @@ def configure():            #configure manually
                     print('Bash has returned an exception while creating a directory; please enter a valid value!')
         if str(expand_path(temp_dir)) in target_dirs:
             print('That directory is already added')
-        if temp_dir!='' and str(temp_dir) not in target_dirs:
+        if temp_dir!='~/$' and temp_dir!='' and temp_dir!='~/' and str(temp_dir) not in target_dirs:
             target_dirs.append(str(expand_path(temp_dir)))
     print()
     print('3. Enter time intervals between backups in seconds')
@@ -256,7 +267,7 @@ def check_integrity():
     if check_dir('~/silly-software/'):
         if check_dir('~/silly-software/chainsaw-backup'):
             if check_file('~/silly-software/chainsaw-backup/config.json'): #checks if json config file exists
-                print('All files intact')   #all files present
+                print('All files present')   #all files present
                 config=open(expand_path('~/silly-software/chainsaw-backup/config.json'), 'r')
                 try:
                     parse_json(True)
@@ -288,6 +299,8 @@ def rm_oldest(directory):  #Some of the methods here were suggested by perplexit
     dir_path = backup_dir       #I better be honest I hadn't known about these. All better than inefficient lists and 'ls -a' parsing **** I was planning to create initially
                                #THOUGH lower your forks and torches I built and double-checked everything. AI's code would be botched anyway
     subdirs = [d for d in dir_path.iterdir() if d.is_dir()]
+    if len(subdirs)<=entries_int:
+        return
     if not subdirs:
         print("No subdirectories found. Where did you take all the backups? What is going on?")
         return
@@ -318,7 +331,9 @@ def disclaimer():
 #start up routine
 check_integrity()
 print('Welcome,',(str(home).replace('/','')).replace('home','')+'!')
+
 #mainloop
+commands=['help','configure','exit','start','parse_json','show_config','d_easter_egg','disclaimer']
 while inp!='start':
     #so basically this thing is supposed to be a never-ending loop taking your input to control it
     #you use codewords to call functions
@@ -342,5 +357,5 @@ while inp!='start':
         easteregg()
     if inp=='disclaimer':
         disclaimer()
-    else:
+    if inp not in commands:
         print(inp,'-- unknown command. Type help for list of all commands')
