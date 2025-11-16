@@ -27,6 +27,7 @@ def daemon(arg):
         print(x.strftime("%c"))
         print('!!! ----PLEASE READ CAREFULLY THE FOLLOWING---- !!!')
         print('(!) First backup is going to be created in 60 seconds.')
+        print('(!) Please make sure backup storing folder is empty every time before running')
         print('(!) Insert Ctrl+C or Ctrl+D to stop doing backups immediately. All pereviously made backups will be kept')
         print('(!) Terminating at exactly the time a backup is made may create a race condition with big files. Handle risks on slower systems accordingly')
         print('(!) It is adviced you review your backup settings before proceeding, use show_config ')
