@@ -26,11 +26,11 @@ def daemon(arg):
         x = datetime.datetime.now()
         print(x.strftime("%c"))
         print('!!! ----PLEASE READ CAREFULLY THE FOLLOWING---- !!!')
-        print('(!) First backup is going to be created in 60 seconds.\n')
-        print('\n(!) Insert Ctrl+C or Ctrl+D to stop doing backups immediately. All pereviously made backups will be kept\n')
-        print('(!) Terminating at exactly the time a backup is made may create a race condition with big files. Handle risks on slower systems accordingly\n')
-        print('(!) It is adviced you review your backup settings before proceeding, use show_config \n')
-        print('(i) You will get a notification in advance when a backup is made\n')
+        print('(!) First backup is going to be created in 60 seconds.')
+        print('(!) Insert Ctrl+C or Ctrl+D to stop doing backups immediately. All pereviously made backups will be kept')
+        print('(!) Terminating at exactly the time a backup is made may create a race condition with big files. Handle risks on slower systems accordingly')
+        print('(!) It is adviced you review your backup settings before proceeding, use show_config ')
+        print('(i) You will get a notification each time a backup is made')
         print('(i) Input is unavailable while backup service is running')
         #!!!!!! ACTUAL BACKUP DAEMON STARTS HERE!!
         config=open(expand_path('~/silly-software/chainsaw-backup/config.json'), 'r')
@@ -41,17 +41,25 @@ def daemon(arg):
         period_int=config_imported.get('period_int')
         sleep(60)
         while True:
-            x=datetime.datetime.now()
+            backup_dir=config_imported.get('backup_dir')
+            x=str(datetime.datetime.now()).replace(' ','_')
             print('Now copying...')
-            prompt=str('mkdir -p'+expand_path(backup_dir)+'backup-'+str(x))
+            prompt=str('mkdir -p '+expand_path(backup_dir)+'backup-'+str(x))
+            backup_dir=backup_dir+'/backup-'+str(x)
+            try:
+                system(prompt)
+            except:
+                print('Fatal error while copying: failed to create a target directory')
+            
             for target in target_dirs:
-                prompt=str('cp -r '+expand_path(target)+' '+expand_path(backup_dir))
+                prompt=str('cp -r '+expand_path(target)+' '+backup_dir).replace('//','/')
                 try:
                     system(prompt)
                 except:
                     print("(!!) ERROR while copying",expand_path(target))
                     print("Promt was: '"+prompt+"'")
             print('Created backup:',x)
+            rm_oldest(config_imported.get('backup_dir'))
             sleep(period_int)
 def check_folders(): #dumped for now, realized ~cp creates the dirs anyway bruh
     legit=True
@@ -106,12 +114,12 @@ def help():                 #dislpay help information
     #print('check_folders   -- verify the existence of folders before running')
     print('\nAdvanced:\n')
     print('parse_json      -- parse and print out Raw Data in config.json')
-    print('\nDebug:                         (!)For development and testing. Use at your own risk\n')
+    print('\nDebug:           (!)For development and testing. Use at your own risk\n')
     print("d_rem_oldest    -- calls rm_oldest() using the current directory configuration as argument by default. Note that it doesn't override entries_int argument in config")
     print('d_easter_egg    -- ???')
     print('\nOther:\n')
     print('disclaimer      -- prints out boring legal stuff')
-    print('credits      -- prints out info about creators')
+    print('credits         -- prints out info about creators')
 def output(string):         #check output for shell command
     return(str(subprocess.check_output(string, shell=True, text=True)))
 def check_dir(directory):
@@ -296,7 +304,7 @@ def rm_oldest(directory):  #Some of the methods here were suggested by perplexit
     entries_int=config_imported.get('entries_int')
     period_int=config_imported.get('period_int')
 
-    dir_path = backup_dir       #I better be honest I hadn't known about these. All better than inefficient lists and 'ls -a' parsing **** I was planning to create initially
+    dir_path = Path(backup_dir)       #I better be honest I hadn't known about these. All better than inefficient lists and 'ls -a' parsing **** I was planning to create initially
                                #THOUGH lower your forks and torches I built and double-checked everything. AI's code would be botched anyway
     subdirs = [d for d in dir_path.iterdir() if d.is_dir()]
     if len(subdirs)<=entries_int:
